@@ -1,0 +1,15 @@
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN apt-get update && apt-get install -y sqlite3
+
+COPY driversTable.py .
+RUN python driversTable.py
+
+COPY order_processor.py .
+
+CMD ["python", "-u", "order_processor.py"]
