@@ -74,7 +74,7 @@ jobs:
           context: processor/
           file: processor/Dockerfile.processor
           push: true
-          tags: your-dockerhub-username/order-processing-processor:latest
+          tags: maxjartie/order-processing-processor:latest
 
   # Шаг 4: Деплой на сервер (опционально, если у вас есть сервер)
   deploy:
