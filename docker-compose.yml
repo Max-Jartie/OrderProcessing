@@ -6,6 +6,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile.api
+    image: maxjartie/docker-api:ltest
     ports:
       - "5000:5000"
     depends_on:
@@ -16,5 +17,6 @@ services:
     build:
       context: ./processor
       dockerfile: Dockerfile.processor
+    image: maxjartie/docker-api:ltest
     depends_on:
       - redis
