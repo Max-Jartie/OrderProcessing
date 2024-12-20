@@ -51,7 +51,7 @@ jobs:
           context: api/
           file: api/Dockerfile.api
           push: true
-          tags: your-dockerhub-username/order-processing-api:latest
+          tags: maxjartie/order-processing-api:latest
 
   # Шаг 3: Сборка и публикация Docker-образа для Processor
   build-processor-docker:
