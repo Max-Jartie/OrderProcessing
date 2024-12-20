@@ -30,8 +30,8 @@ jobs:
         run: |
           python -m unittest discover -s tests
 
-  # Шаг 2: Сборка и публикация Docker-образа для API
-  build-api-docker:
+  # Шаг 2: Сборка и публикация Docker-образов
+  build-docker:
     runs-on: ubuntu-latest
     needs: build-and-test
 
@@ -39,58 +39,54 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Log in to DockerHub
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push API Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: api/
-          file: api/Dockerfile.api
-          push: true
-          tags: maxjartie/order-processing-api:latest
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/order-processing-api:latest -f api/Dockerfile.api .
+          docker push ${{ secrets.DOCKER_USERNAME }}/order-processing-api:latest
 
-  # Шаг 3: Сборка и публикация Docker-образа для Processor
-  build-processor-docker:
+      - name: Build and push Processor Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/order-processing-processor:latest -f processor/Dockerfile.processor .
+          docker push ${{ secrets.DOCKER_USERNAME }}/order-processing-processor:latest
+
+  # Шаг 3: Тестовый деплой
+  test-deploy:
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: build-docker
 
     steps:
-      - name: Checkout repository
+      # Шаг 1: Клонировать репозиторий
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Log in to DockerHub
+      # Шаг 2: Настроить Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      # Шаг 3: Установить Docker Compose
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      # Шаг 4: Войти в Docker Hub
+      - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Processor Docker image
-        uses: docker/build-push-action@v4
-        with:
-          context: processor/
-          file: processor/Dockerfile.processor
-          push: true
-          tags: maxjartie/order-processing-processor:latest
-
-  # Шаг 4: Деплой на сервер (опционально, если у вас есть сервер)
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [build-api-docker, build-processor-docker]
-
-    steps:
-      - name: Deploy to server
+      # Шаг 5: Собрать и загрузить образы в Docker Hub
+      - name: Deploy services
         run: |
-          ssh -o StrictHostKeyChecking=no -i ${{ secrets.SSH_PRIVATE_KEY }} user@your-server.com << 'EOF'
-            docker pull your-dockerhub-username/order-processing-api:latest
-            docker pull your-dockerhub-username/order-processing-processor:latest
-            docker stop orderprocessing-api || true
-            docker rm orderprocessing-api || true
-            docker run -d --name orderprocessing-api -p 80:80 your-dockerhub-username/order-processing-api:latest
-            docker stop orderprocessing-processor || true
-            docker rm orderprocessing-processor || true
-            docker run -d --name orderprocessing-processor your-dockerhub-username/order-processing-processor:latest
-          EOF
+          docker-compose -f ./docker-compose.yml pull
+          docker-compose -f ./docker-compose.yml up -d
